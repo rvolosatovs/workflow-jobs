@@ -1,0 +1,68 @@
+# https://github.com/enarx/vfs/blob/97a59d3fe22d6e6a5151de974fc68ee7b126badc/.github/workflows/check.yml
+
+name: check
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nix-fmt:
+    name: "nix fmt"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v18
+      with:
+        extra_nix_config: |
+          access-tokens = github.com=${{ github.token }}
+    - uses: cachix/cachix-action@v12
+      with:
+        name: enarx
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - run: nix fmt
+
+  checks:
+    strategy:
+      matrix:
+        config:
+        - host: macos-latest
+          system: x86_64-darwin
+          check: clippy
+
+        - host: macos-latest
+          system: x86_64-darwin
+          check: nextest
+
+        - host: ubuntu-latest
+          system: x86_64-linux
+          check: clippy
+
+        - host: ubuntu-latest
+          system: x86_64-linux
+          check: nextest
+
+        - host: ubuntu-latest
+          system: x86_64-linux
+          check: fmt
+
+    runs-on: ${{ matrix.config.host }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v18
+      with:
+        extra_nix_config: |
+          access-tokens = github.com=${{ github.token }}
+    - uses: cachix/cachix-action@v12
+      with:
+        name: enarx
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - run: rustup show
+    - run: cargo update
+    - run: git add -f Cargo.lock
+    - run: nix build -L --show-trace '.#checks.${{ matrix.config.system }}.${{ matrix.config.check }}'

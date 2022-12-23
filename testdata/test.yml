@@ -1,0 +1,140 @@
+# Copied from https://github.com/enarx/enarx/blob/6bbf266ba281cb695fffc589bb9e678cbb239928/.github/workflows/test.yml
+
+name: test
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main:
+    name: enarx ${{ matrix.backend.name }} nightly ${{ matrix.profile.name }}
+    runs-on: ${{ matrix.backend.host }}
+    env:
+        ENARX_BACKEND: ${{ matrix.backend.name }}
+    steps:
+      - name: Cleanup working directory
+        run: rm -fr * $HOME/.cargo $HOME/.rustup
+      - uses: actions/checkout@v3
+
+      - name: Install rustup
+        run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly-2022-12-14 -y
+      - uses: actions-rs/toolchain@v1
+        with:
+          target: x86_64-unknown-linux-gnu
+          toolchain: nightly-2022-12-14
+          profile: minimal
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: ${{ matrix.profile.flag }}
+    strategy:
+      fail-fast: false
+      matrix:
+        backend:
+          - {name: sev, host: [self-hosted, linux, sev-snp]}
+          - {name: sgx, host: [self-hosted, linux, sgx]}
+          - {name: kvm, host: [self-hosted, linux, x64]}
+        profile:
+          - name: debug
+          - name: debug with dbg
+            flag: --features=dbg
+          - name: release
+            flag: --release
+
+  build-only:
+    name: enarx build-only nightly ${{ matrix.profile.name }}
+    runs-on: ubuntu-20.04
+    steps:
+      - run: sudo apt -o Acquire::Retries=3 update
+      - run: sudo apt -o Acquire::Retries=3 install -y musl-tools
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        run: rustup show
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: ${{ matrix.profile.flag }}
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - name: default-features
+          - name: gdb
+            flag: --features=gdb
+
+  macos:
+    name: enarx MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        run: rustup show
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+
+  windows:
+    name: enarx Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        run: rustup show
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+
+  bindeps:
+    name: ${{ matrix.crate.name }} nightly ${{ matrix.profile.name }}
+    runs-on: ubuntu-20.04
+    steps:
+      - run: sudo apt -o Acquire::Retries=3 update
+      - run: sudo apt -o Acquire::Retries=3 install -y musl-tools
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        run: rustup show
+      - run: cargo test ${{ matrix.profile.flag }} --workspace --target x86_64-unknown-linux-gnu
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - name: debug
+          - name: release
+            flag: --release
+
+  miri:
+    name: ${{ matrix.crate.name }} miri ${{ matrix.profile.name }}
+    runs-on: ubuntu-20.04
+    steps:
+      - run: sudo apt -o Acquire::Retries=3 update
+      - run: sudo apt -o Acquire::Retries=3 install -y musl-tools
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        run: rustup show
+      - uses: actions-rs/cargo@v1
+        name: cargo miri setup
+        with:
+          command: miri
+          args: setup --manifest-path ${{ matrix.crate.path }}/Cargo.toml
+      - uses: actions-rs/cargo@v1
+        name: cargo miri test
+        env:
+          MIRIFLAGS: "-Zmiri-disable-isolation"
+        with:
+          command: miri
+          args: test --manifest-path ${{ matrix.crate.path }}/Cargo.toml
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - { name: sallyport, path: crates/sallyport }
+        profile:
+          - name: debug
+          - name: release
+            flag: --release
