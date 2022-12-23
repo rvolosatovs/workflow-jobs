@@ -42,13 +42,13 @@ checks (ubuntu-latest, x86_64-linux, fmt)
 ### List all job names in a repository
 
 ```
-$ for f in .github/workflows/*; do workflow-jobs "${f}"; done
+$ workflow-jobs .github/workflows/*
 ```
 
 #### https://github.com/enarx/enarx/tree/6bbf266ba281cb695fffc589bb9e678cbb239928
 
 ```
-$ for f in .github/workflows/*; do workflow-jobs "${f}"; done
+$ workflow-jobs .github/workflows/*
 create-pr
 Conventional Commit Message Checker (Commisery)
 sev coverage
