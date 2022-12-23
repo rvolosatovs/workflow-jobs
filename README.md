@@ -58,10 +58,10 @@ nil coverage
 dependabot
 triage
 cargo fmt
-cargo clippy ( --workspace --all-targets )
-cargo clippy ( --target=x86_64-unknown-linux-musl --workspace --all-targets )
-cargo clippy ( --target=x86_64-unknown-none -p enarx-shim-sgx -p enarx-shim-kvm -p sallyport -p enarx_syscall_tests )
-cargo clippy ( --target=wasm32-wasi -p enarx_wasm_tests --all-targets )
+cargo clippy (--workspace --all-targets)
+cargo clippy (--target=x86_64-unknown-linux-musl --workspace --all-targets)
+cargo clippy (--target=x86_64-unknown-none -p enarx-shim-sgx -p enarx-shim-kvm -p sallyport -p enarx_syscall_tests)
+cargo clippy (--target=wasm32-wasi -p enarx_wasm_tests --all-targets)
 cargo deny
 check-spdx-headers
 nix-update

@@ -1,0 +1,6 @@
+jobs:
+  missing:
+    name: ${{ matrix.a }} a ${{ matrix.config.b }} b ${{ matrix.config.c }} c ${{ matrix.foo.bar }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3

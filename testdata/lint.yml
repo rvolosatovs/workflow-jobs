@@ -1,0 +1,66 @@
+# Copied from https://github.com/enarx/enarx/blob/6bbf266ba281cb695fffc589bb9e678cbb239928/.github/workflows/lint.yml
+
+name: lint
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        run: rustup show
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy:
+    name: cargo clippy (${{ matrix.args }})
+    runs-on: ubuntu-20.04
+    steps:
+      - run: sudo apt -o Acquire::Retries=3 update
+      - run: sudo apt -o Acquire::Retries=3 install -y musl-tools
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        run: rustup show
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: ${{ matrix.args }} -- -D warnings
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: ${{ matrix.args }} --all-features -- -D warnings
+    strategy:
+      fail-fast: false
+      matrix:
+        args:
+          - --workspace --all-targets
+          - --target=x86_64-unknown-linux-musl --workspace --all-targets
+          - --target=x86_64-unknown-none -p enarx-shim-sgx -p enarx-shim-kvm -p sallyport -p enarx_syscall_tests
+          - --target=wasm32-wasi -p enarx_wasm_tests --all-targets
+
+  deny:
+    name: cargo deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          arguments: --workspace
+
+  check-spdx-headers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - uses: enarx/spdx@master
+        with:
+          licenses: Apache-2.0 BSD-3-Clause MIT

@@ -177,22 +177,21 @@ struct Template(String);
 impl Template {
     fn apply(&self, matrix: &HashMap<String, String>) -> anyhow::Result<String> {
         let mut it = self.0.split("${{");
-        let head = it.next().context("`name` missing")?.trim();
+        let head = it.next().context("`name` missing")?;
         it.try_fold(head.into(), |head, part| {
             let (name, tail) = part.split_once("}}").context("failed to find `}}`")?;
             let name = name.trim();
             let name = name
                 .strip_prefix("matrix.")
                 .context(format!("missing `matrix.` prefix in `{name}`"))?;
-            let tail = tail.trim();
             Ok(if let Some(v) = matrix.get(name) {
-                format!("{head} {v} {tail}")
+                format!("{head}{v}{tail}")
             } else {
-                format!("{head} {tail}")
+                format!("{head}{tail}")
             }
-            .trim()
             .into())
         })
+        .map(|s: String| s.trim().replace("  ", " "))
     }
 }
 
@@ -392,6 +391,37 @@ mod tests {
     }
 
     #[test]
+    fn check_names() {
+        assert_eq!(
+            read_names(include_str!("../testdata/check.yml").as_bytes()).unwrap(),
+            vec![
+                "nix fmt",
+                "checks (macos-latest, x86_64-darwin, clippy)",
+                "checks (macos-latest, x86_64-darwin, nextest)",
+                "checks (ubuntu-latest, x86_64-linux, clippy)",
+                "checks (ubuntu-latest, x86_64-linux, nextest)",
+                "checks (ubuntu-latest, x86_64-linux, fmt)",
+            ],
+        );
+    }
+
+    #[test]
+    fn lint_names() {
+        assert_eq!(
+            read_names(include_str!("../testdata/lint.yml").as_bytes()).unwrap(),
+            vec![
+                "cargo fmt",
+                "cargo clippy (--workspace --all-targets)",
+                "cargo clippy (--target=x86_64-unknown-linux-musl --workspace --all-targets)",
+                "cargo clippy (--target=x86_64-unknown-none -p enarx-shim-sgx -p enarx-shim-kvm -p sallyport -p enarx_syscall_tests)",
+                "cargo clippy (--target=wasm32-wasi -p enarx_wasm_tests --all-targets)",
+                "cargo deny",
+                "check-spdx-headers",
+            ]
+        );
+    }
+
+    #[test]
     fn test_names() {
         assert_eq!(
             read_names(include_str!("../testdata/test.yml").as_bytes()).unwrap(),
@@ -418,17 +448,10 @@ mod tests {
     }
 
     #[test]
-    fn check_names() {
+    fn missing_names() {
         assert_eq!(
-            read_names(include_str!("../testdata/check.yml").as_bytes()).unwrap(),
-            vec![
-                "nix fmt",
-                "checks (macos-latest, x86_64-darwin, clippy)",
-                "checks (macos-latest, x86_64-darwin, nextest)",
-                "checks (ubuntu-latest, x86_64-linux, clippy)",
-                "checks (ubuntu-latest, x86_64-linux, nextest)",
-                "checks (ubuntu-latest, x86_64-linux, fmt)",
-            ],
+            read_names(include_str!("../testdata/missing.yml").as_bytes()).unwrap(),
+            vec!["a b c"]
         );
     }
 }
