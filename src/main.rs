@@ -7,7 +7,7 @@ use std::io::Read;
 use std::ops::Deref;
 use std::{fmt, iter};
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use serde::{de, Deserialize, Deserializer};
 
 #[derive(Debug, Deserialize)]
@@ -262,16 +262,11 @@ fn read_names(r: impl Read) -> anyhow::Result<Vec<String>> {
 }
 
 fn main() -> anyhow::Result<()> {
-    let mut args = args();
-    let path = match (args.next(), args.next()) {
-        (Some(_), Some(path)) => path,
-        (Some(name), _) => bail!("usage: {name} <path>",),
-        _ => bail!("expected executable name as the first argument"),
-    };
-
-    let file = File::open(&path).context(format!("failed to open `{path}`"))?;
-    for name in read_names(file).context("failed to parse job names")? {
-        println!("{name}");
+    for path in args().skip(1) {
+        let file = File::open(&path).context(format!("failed to open `{path}`"))?;
+        for name in read_names(file).context("failed to parse job names")? {
+            println!("{name}");
+        }
     }
     Ok(())
 }

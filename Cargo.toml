@@ -1,6 +1,6 @@
 [package]
 name = "workflow-jobs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Parse GitHub Action workflow definitions into job names"
 authors = ["Roman Volosatovs"]
