@@ -249,7 +249,8 @@ fn read_names(r: impl Read) -> anyhow::Result<Vec<String>> {
                     names.extend(it);
                 }
 
-                (Some(Template(name)), None) => {
+                (Some(name), None) => {
+                    let name = name.apply(&HashMap::default())?;
                     names.push(name);
                 }
                 (Some(ref name), Some(matrix)) => {
